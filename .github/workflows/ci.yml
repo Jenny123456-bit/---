@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    name: 测试（Node ${{ matrix.node }}）
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # 零依赖，无需 install
+      - name: 运行测试
+        run: npm test
+
+      - name: 校验静态资源完整性
+        run: |
+          test -f index.html
+          test -f assets/css/style.css
+          test -f assets/js/tax-engine.js
+          echo "静态资源齐全"

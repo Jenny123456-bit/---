@@ -1,0 +1,22 @@
+# 依赖（本项目零依赖，仅防御）
+node_modules/
+package-lock.json
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# 构建与临时产物
+dist/
+*.log
+_shot*.png
+_probe.*
+_dom.html
+
+# 本地环境
+.env
+.env.local

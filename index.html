@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>个税预测 · 2027 全年个税测算与扣除优化</title>
+<meta name="description" content="输入工资、年终奖、公积金与专项附加扣除，一键预测明年个人所得税，并智能提示尚未用足的扣除项。">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232563eb'/><stop offset='1' stop-color='%230ea5e9'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><path d='M30 32h40M30 50h40M30 68h24' stroke='white' stroke-width='8' stroke-linecap='round'/></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>个税预测</h1>
+        <p>全年个税测算 · 扣除项智能诊断</p>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="seg" id="yearSeg" role="tablist" aria-label="测算年度">
+        <button type="button" data-year="2026" role="tab">2026</button>
+        <button type="button" data-year="2027" role="tab" class="on">2027</button>
+      </div>
+      <button type="button" class="btn ghost" id="btnShare">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        分享方案
+      </button>
+      <button type="button" class="btn ghost" id="btnReset">重置</button>
+    </div>
+  </div>
+</header>
+
+<div class="policy-bar">
+  <span class="dot"></span>
+  <span>政策口径：现行综合所得七级超额累进税率表，基本减除费用 5000 元/月；全年一次性奖金单独计税优惠执行至 2027 年 12 月 31 日。</span>
+</div>
+
+<main class="layout">
+
+  <!-- ============ 左：输入 ============ -->
+  <section class="col-in" aria-label="收入与扣除输入">
+    <form id="taxForm" autocomplete="off" novalidate>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>收入</h2>
+          <span class="hint">税前金额，单位：元</span>
+        </div>
+        <div class="card-bd">
+          <label class="field">
+            <span class="lb">月薪（税前）<em>元 / 月</em></span>
+            <div class="inp">
+              <span class="cur">¥</span>
+              <input id="monthlySalary" type="number" inputmode="decimal" min="0" step="500" value="20000">
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="lb">年终奖（全年一次性奖金）<em>元 / 年</em></span>
+            <div class="inp">
+              <span class="cur">¥</span>
+              <input id="bonus" type="number" inputmode="decimal" min="0" step="1000" value="60000">
+            </div>
+          </label>
+
+          <label class="field">
+            <span class="lb">其他综合所得<em>劳务报酬等，填收入额</em></span>
+            <div class="inp">
+              <span class="cur">¥</span>
+              <input id="otherIncome" type="number" inputmode="decimal" min="0" step="1000" value="0">
+            </div>
+            <span class="tip">劳务报酬按收入的 80% 计入，此处可直接填折算后的金额</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>五险一金</h2>
+          <span class="hint">个人缴纳部分，全额税前扣除</span>
+        </div>
+        <div class="card-bd">
+          <div class="field-row">
+            <label class="field">
+              <span class="lb">社保缴费基数</span>
+              <div class="inp"><span class="cur">¥</span><input id="socialBase" type="number" inputmode="decimal" min="0" step="500" value="20000"></div>
+            </label>
+            <label class="field">
+              <span class="lb">个人合计费率</span>
+              <div class="inp"><input id="socialRate" type="number" inputmode="decimal" min="0" max="100" step="0.1" value="10.5"><span class="unit">%</span></div>
+            </label>
+          </div>
+
+          <div class="field-row">
+            <label class="field">
+              <span class="lb">公积金缴存基数</span>
+              <div class="inp"><span class="cur">¥</span><input id="fundBase" type="number" inputmode="decimal" min="0" step="500" value="20000"></div>
+            </label>
+            <label class="field">
+              <span class="lb">缴存比例</span>
+              <div class="inp">
+                <select id="fundRate">
+                  <option value="5">5%</option>
+                  <option value="6">6%</option>
+                  <option value="7">7%</option>
+                  <option value="8">8%</option>
+                  <option value="9">9%</option>
+                  <option value="10">10%</option>
+                  <option value="11">11%</option>
+                  <option value="12" selected>12%</option>
+                </select>
+              </div>
+            </label>
+          </div>
+
+          <div class="sum-line">
+            <span>每月个人缴纳合计</span>
+            <strong id="socialFundSum">¥0</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>专项附加扣除</h2>
+          <span class="hint" id="addSumHint">合计 ¥0 / 月</span>
+        </div>
+        <div class="card-bd ded-list">
+
+          <!-- 子女教育 -->
+          <div class="ded" data-ded="childEdu">
+            <label class="switch"><input type="checkbox" id="dedChildEdu"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">子女教育<span class="std">2000 元/月 · 每个子女</span></div>
+              <div class="ded-ctrl">
+                <select id="childEduCount" data-when="dedChildEdu">
+                  <option value="1">1 个子女</option>
+                  <option value="2">2 个子女</option>
+                  <option value="3">3 个子女</option>
+                </select>
+                <select id="childEduShare" data-when="dedChildEdu">
+                  <option value="100">本人扣 100%</option>
+                  <option value="50">夫妻各扣 50%</option>
+                </select>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtChildEdu">¥0</div>
+          </div>
+
+          <!-- 婴幼儿 -->
+          <div class="ded" data-ded="baby">
+            <label class="switch"><input type="checkbox" id="dedBaby"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">3 岁以下婴幼儿照护<span class="std">2000 元/月 · 每个</span></div>
+              <div class="ded-ctrl">
+                <select id="babyCount" data-when="dedBaby">
+                  <option value="1">1 个</option>
+                  <option value="2">2 个</option>
+                </select>
+                <select id="babyShare" data-when="dedBaby">
+                  <option value="100">本人扣 100%</option>
+                  <option value="50">夫妻各扣 50%</option>
+                </select>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtBaby">¥0</div>
+          </div>
+
+          <!-- 继续教育 -->
+          <div class="ded" data-ded="edu">
+            <label class="switch"><input type="checkbox" id="dedEdu"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">继续教育<span class="std">学历 400 元/月 或 证书 3600 元/年</span></div>
+              <div class="ded-ctrl">
+                <select id="eduType" data-when="dedEdu">
+                  <option value="degree">学历（学位）继续教育</option>
+                  <option value="cert">职业资格证书（当年一次性）</option>
+                </select>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtEdu">¥0</div>
+          </div>
+
+          <!-- 住房 -->
+          <div class="ded" data-ded="housing">
+            <label class="switch"><input type="checkbox" id="dedHousing"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">住房贷款利息 / 住房租金<span class="std">二选一</span></div>
+              <div class="ded-ctrl">
+                <select id="housingType" data-when="dedHousing">
+                  <option value="loan">首套房贷利息 1000 元/月</option>
+                  <option value="rent1500">租金·直辖市/省会/计划单列市 1500</option>
+                  <option value="rent1100">租金·人口 &gt; 100 万城市 1100</option>
+                  <option value="rent800">租金·人口 ≤ 100 万城市 800</option>
+                </select>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtHousing">¥0</div>
+          </div>
+
+          <!-- 赡养老人 -->
+          <div class="ded" data-ded="elderly">
+            <label class="switch"><input type="checkbox" id="dedElderly"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">赡养老人<span class="std">独生 3000 元/月，非独生分摊 ≤1500</span></div>
+              <div class="ded-ctrl">
+                <select id="elderlyType" data-when="dedElderly">
+                  <option value="only">独生子女 3000 元/月</option>
+                  <option value="shared">非独生子女分摊</option>
+                </select>
+                <div class="inp mini" id="elderlyShareWrap" hidden>
+                  <span class="cur">¥</span><input id="elderlyShare" type="number" min="0" max="1500" step="100" value="1500">
+                </div>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtElderly">¥0</div>
+          </div>
+
+          <!-- 大病医疗 -->
+          <div class="ded" data-ded="majorMedical">
+            <label class="switch"><input type="checkbox" id="dedMedical"><i></i></label>
+            <div class="ded-body">
+              <div class="ded-name">大病医疗<span class="std">自付超 1.5 万部分，限额 8 万，汇算扣除</span></div>
+              <div class="ded-ctrl">
+                <div class="inp mini" data-when="dedMedical">
+                  <span class="cur">¥</span><input id="medicalAmount" type="number" min="0" max="80000" step="1000" value="0" placeholder="可扣除金额">
+                </div>
+              </div>
+            </div>
+            <div class="ded-amt" id="amtMedical">¥0</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd">
+          <h2>其他扣除</h2>
+          <span class="hint">据实扣除，年度限</span>
+        </div>
+        <div class="card-bd">
+          <div class="field-row">
+            <label class="field">
+              <span class="lb">个人养老金<em>≤ 12000 / 年</em></span>
+              <div class="inp"><span class="cur">¥</span><input id="pension" type="number" inputmode="decimal" min="0" max="12000" step="1000" value="0"></div>
+            </label>
+            <label class="field">
+              <span class="lb">商业健康险<em>≤ 2400 / 年</em></span>
+              <div class="inp"><span class="cur">¥</span><input id="healthIns" type="number" inputmode="decimal" min="0" max="2400" step="200" value="0"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><h2>年终奖计税方式</h2></div>
+        <div class="card-bd">
+          <div class="radio-group" id="bonusMode">
+            <label class="radio on"><input type="radio" name="bonusMode" value="auto" checked><span>自动择优<em>推荐</em></span></label>
+            <label class="radio"><input type="radio" name="bonusMode" value="separate"><span>单独计税</span></label>
+            <label class="radio"><input type="radio" name="bonusMode" value="merge"><span>并入综合</span></label>
+          </div>
+        </div>
+      </div>
+
+    </form>
+  </section>
+
+  <!-- ============ 右：结果 ============ -->
+  <section class="col-out" aria-label="测算结果">
+
+    <div class="hero">
+      <div class="hero-main">
+        <div class="hero-label" id="heroLabel">2027 年预计全年个税</div>
+        <div class="hero-num"><span class="cur">¥</span><span id="totalTax">0</span></div>
+        <div class="hero-sub">
+          <span id="taxStress">综合税负率 0%</span>
+          <span class="sep">·</span>
+          <span id="taxDiff"></span>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="kpi">
+          <span class="kpi-lb">税后年收入</span>
+          <span class="kpi-val" id="afterTax">¥0</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-lb">月均到手</span>
+          <span class="kpi-val" id="monthlyNet">¥0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card tight">
+        <div class="card-hd sm"><h3>应纳税所得额与税率档</h3></div>
+        <div class="card-bd">
+          <div class="rate-head">
+            <div>
+              <span class="mini-lb">应纳税所得额</span>
+              <strong id="taxable">¥0</strong>
+            </div>
+            <div class="rate-badge" id="rateBadge">3%</div>
+          </div>
+          <div class="rate-track" id="rateTrack"></div>
+          <div class="rate-foot">
+            <span>速算扣除数 <b id="qd">¥0</b></span>
+            <span>边际税率 <b id="marginal">3%</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card tight">
+        <div class="card-hd sm"><h3>年终奖计税方案对比</h3></div>
+        <div class="card-bd">
+          <div class="cmp" id="cmpBox">
+            <div class="cmp-item" data-mode="separate">
+              <span class="cmp-lb">单独计税</span>
+              <span class="cmp-val" id="cmpSep">¥0</span>
+            </div>
+            <div class="cmp-item" data-mode="merge">
+              <span class="cmp-lb">并入综合所得</span>
+              <span class="cmp-val" id="cmpMerge">¥0</span>
+            </div>
+          </div>
+          <div class="cmp-note" id="cmpNote">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <h3>月度到手现金流</h3>
+        <span class="hint" id="monthHint">含社保公积金与个税扣除后</span>
+      </div>
+      <div class="card-bd">
+        <div class="chart" id="chart"></div>
+        <div class="legend">
+          <span><i style="background:var(--brand)"></i>到手工资</span>
+          <span><i style="background:var(--danger)"></i>个税</span>
+          <span><i style="background:#c7d2e0"></i>社保 + 公积金</span>
+          <span class="legend-note" id="settleNote"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <h3>收入 → 扣除 → 应税 结构</h3>
+        <span class="hint">单位：元 / 年</span>
+      </div>
+      <div class="card-bd">
+        <div class="flow" id="flow"></div>
+      </div>
+    </div>
+
+    <div class="card" id="adviceCard">
+      <div class="card-hd">
+        <h3>扣除缺口诊断</h3>
+        <span class="hint">按可节税额排序</span>
+      </div>
+      <div class="card-bd">
+        <div class="advice-total" id="adviceTotal"></div>
+        <div class="advice-list" id="adviceList"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd">
+        <h3>测算明细</h3>
+        <button type="button" class="link" id="btnCopy">复制明细</button>
+      </div>
+      <div class="card-bd">
+        <table class="detail" id="detailTable"></table>
+      </div>
+    </div>
+
+    <p class="disclaimer">
+      本工具结果依据现行个人所得税法及配套政策自动测算，用于收入规划参考。实际应缴税额以扣缴义务人申报及税务机关年度汇算结果为准。
+      适用于居民个人工资薪金、全年一次性奖金及劳务报酬等综合所得。
+    </p>
+  </section>
+</main>
+
+<!-- ============ AI 助手 ============ -->
+<button type="button" class="chat-fab" id="chatFab" aria-label="打开个税助手">
+  <svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span class="fab-dot" id="fabDot"></span>
+</button>
+
+<aside class="chat" id="chatPanel" hidden aria-label="个税 AI 助手">
+  <header class="chat-hd">
+    <div class="chat-id">
+      <div class="chat-avatar">AI</div>
+      <div>
+        <strong>个税助手</strong>
+        <span id="chatStatus">本地知识库模式</span>
+      </div>
+    </div>
+    <div class="chat-acts">
+      <button type="button" id="btnChatCfg" title="接口设置" aria-label="接口设置">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 003.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 008 3.6a1.65 1.65 0 001-1.51V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0020.4 8v0a1.65 1.65 0 001.51 1H22a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button type="button" id="btnChatClose" title="收起" aria-label="收起">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="chat-body" id="chatBody"></div>
+
+  <div class="chat-chips" id="chatChips">
+    <button type="button">我的税为什么这么高</button>
+    <button type="button">还有哪些扣除能补</button>
+    <button type="button">年终奖怎么发最省税</button>
+    <button type="button">公积金要不要提到 12%</button>
+  </div>
+
+  <form class="chat-input" id="chatForm">
+    <textarea id="chatText" rows="1" placeholder="问问你的个税…（Enter 发送，Shift+Enter 换行）"></textarea>
+    <button type="submit" id="chatSend" aria-label="发送">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+</aside>
+
+<!-- 接口设置弹窗 -->
+<div class="modal" id="cfgModal" hidden>
+  <div class="modal-mask" data-close></div>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-label="AI 接口设置">
+    <div class="modal-hd">
+      <h3>AI 接口设置</h3>
+      <button type="button" class="modal-x" data-close aria-label="关闭">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-bd">
+      <p class="modal-note">
+        支持任意 <b>OpenAI 兼容</b> 的 Chat Completions 接口。Key 只保存在本机浏览器 localStorage，不会上传到任何服务器；
+        不填 Key 时助手自动使用内置规则引擎回答。
+      </p>
+
+      <label class="field">
+        <span class="lb">接口地址</span>
+        <div class="inp"><input id="cfgBase" type="text" placeholder="https://api.deepseek.com/v1" spellcheck="false"></div>
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="lb">模型</span>
+          <div class="inp"><input id="cfgModel" type="text" placeholder="deepseek-chat" spellcheck="false"></div>
+        </label>
+        <label class="field">
+          <span class="lb">温度</span>
+          <div class="inp"><input id="cfgTemp" type="number" min="0" max="1.5" step="0.1" value="0.4"></div>
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="lb">API Key</span>
+        <div class="inp"><input id="cfgKey" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off"></div>
+      </label>
+
+      <div class="preset-row">
+        <span>快捷填充</span>
+        <button type="button" class="chip" data-preset="deepseek">DeepSeek</button>
+        <button type="button" class="chip" data-preset="qwen">通义千问</button>
+        <button type="button" class="chip" data-preset="moonshot">Kimi</button>
+        <button type="button" class="chip" data-preset="openai">OpenAI</button>
+      </div>
+
+      <div class="cfg-status" id="cfgStatus"></div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="btn ghost" id="cfgClear">清除</button>
+      <button type="button" class="btn ghost" id="cfgTest">测试连接</button>
+      <button type="button" class="btn primary" id="cfgSave">保存并启用</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="assets/js/tax-engine.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/chat.js"></script>
+</body>
+</html>
