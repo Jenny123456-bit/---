@@ -11,7 +11,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+// 入口解析：优先模块化 index.html；若交付包只保留单文件版，则退回 index-standalone.html
+const MODULAR = path.join(ROOT, 'index.html');
+const STANDALONE = path.join(ROOT, 'index-standalone.html');
+const ENTRY = fs.existsSync(MODULAR) ? MODULAR : STANDALONE;
+const IS_SINGLE_FILE = ENTRY === STANDALONE;
+
+const html = fs.readFileSync(ENTRY, 'utf8');
 const css = fs.readFileSync(path.join(ROOT, 'assets', 'css', 'style.css'), 'utf8');
 
 const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1]));
@@ -51,6 +58,17 @@ test('页面包含全部关键元素', () => {
 });
 
 test('脚本按依赖顺序加载', () => {
+  if (IS_SINGLE_FILE) {
+    // 单文件版：样式与脚本全部内联，且不得再引用任何外部资源
+    const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+    assert.equal(inline.length, 3, '单文件版应内联三段脚本');
+    assert.equal([...html.matchAll(/<script src=/g)].length, 0, '单文件版不应引用外部 js');
+    assert.match(inline[0][1], /(?:window|global)\.TaxEngine/, '第 1 段应为计税引擎');
+    assert.match(inline[1][1], /window\.TaxApp/, '第 2 段应为主逻辑');
+    assert.match(inline[2][1], /window\.TaxChat/, '第 3 段应为 AI 助手');
+    assert.match(html, /<style>[\s\S]*--brand/, '样式应已内联');
+    return;
+  }
   const order = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
   assert.deepEqual(order, [
     'assets/js/tax-engine.js',
@@ -63,6 +81,12 @@ test('所有本地资源文件真实存在', () => {
   const refs = [
     ...html.matchAll(/(?:src|href)="((?!data:|https?:|#)[^"]+)"/g)
   ].map(m => m[1]);
+
+  if (IS_SINGLE_FILE) {
+    assert.deepEqual(refs, [], '单文件版不应依赖任何外部资源，否则换个目录打开就会丢样式');
+    assert.ok(html.length > 80000, '单文件版应包含内联的样式与脚本');
+    return;
+  }
 
   assert.ok(refs.length >= 4, '至少引用 css 与 3 个 js');
   refs.forEach(ref => {

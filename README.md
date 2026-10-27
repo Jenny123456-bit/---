@@ -62,11 +62,13 @@
 ## 快速开始
 
 ### 方式一：直接打开（最快）
-用浏览器打开 `index.html` 即可。功能完整，仅 AI 助手的联网能力需要配置接口。
+双击 **`index-standalone.html`** 即可。CSS 与 JS 已全部内联，**不依赖 `assets/` 目录**，从压缩包里直接打开、单独拷给他人、放任意目录都不会丢样式。
 
-> **如果打开后是「白底、没有样式」的裸页面**，说明只拿到了 `index.html` 而没拿到旁边的 `assets/` 目录（常见于从压缩包里直接双击预览、或只拷贝了单个文件）。两种情况都好解决：
-> - 把整个文件夹解压后再打开 `index.html`；或
-> - 直接用 **`index-standalone.html`** —— 单文件版，CSS 与 JS 全部内联，双击即完整渲染，也可以单独发给别人。
+> 本交付包以**单文件版**为入口，因此目录里没有 `index.html`。`assets/` 下仍是完整的模块化源码（`tax-engine.js` / `app.js` / `chat.js` / `style.css`），便于阅读与二次开发；如需模块化入口，从 git 历史取回即可：
+> ```bash
+> git show 39716e0:个税预测工具/index.html > index.html
+> ```
+> 两个入口的行为完全一致（已验证渲染像素差异 0.0000%）。
 
 ### 方式二：本地服务器（推荐，避免个别浏览器的 file:// 限制）
 ```bash
@@ -92,8 +94,7 @@ npx serve .
 
 ```
 .
-├── index.html                  # 单页结构：顶栏 / 输入 / 结果 / AI 浮窗 / 设置弹窗
-├── index-standalone.html       # 单文件构建版（CSS/JS 内联，约 119 KB，双击即用）
+├── index-standalone.html       # 应用入口（单文件版：CSS/JS 全内联，约 119 KB，双击即用）
 ├── assets/
 │   ├── css/style.css           # 全部样式（响应式 + 打印适配）
 │   └── js/

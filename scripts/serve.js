@@ -13,6 +13,11 @@ const url = require('node:url');
 const ROOT = path.join(__dirname, '..');
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 
+// 入口解析：优先 index.html，交付包只有单文件版时退回 index-standalone.html
+const ENTRY = fs.existsSync(path.join(ROOT, 'index.html'))
+  ? 'index.html'
+  : 'index-standalone.html';
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -27,7 +32,7 @@ const MIME = {
 
 const server = http.createServer((req, res) => {
   const pathname = decodeURIComponent(url.parse(req.url).pathname);
-  let filePath = path.join(ROOT, pathname === '/' ? 'index.html' : pathname);
+  let filePath = path.join(ROOT, pathname === '/' ? ENTRY : pathname);
 
   // 防目录穿越
   if (!filePath.startsWith(ROOT)) {

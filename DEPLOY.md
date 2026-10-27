@@ -27,13 +27,13 @@ server {
     listen 80;
     server_name tax.example.com;
     root /var/www/tax-forecast;
-    index index.html;
+    index index-standalone.html;
 
     charset utf-8;
 
-    # SPA 单页，哈希路由不需要 try_files 回退，但保留一条更稳妥
+    # 单页应用；入口为单文件版（若你恢复了模块化 index.html，把下面两处改回 index.html）
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri $uri/ /index-standalone.html;
     }
 
     # 静态资源长缓存（文件名未做 hash 时建议改为 1h，避免更新不生效）
